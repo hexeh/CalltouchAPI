@@ -33,7 +33,7 @@ class CalltouchApi:
 			'clientApiId': self.token,
 			'dateFrom': date,
 			'dateTo': date,
-			'attribution': attribution,
+			'attribution': str(attribution),
 			'targetOnly': targetOnly,
 			'uniqueOnly': uniqOnly,
 			'uniqTargetOnly': uniqTargetOnly,
