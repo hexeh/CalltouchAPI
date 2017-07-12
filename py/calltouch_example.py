@@ -9,7 +9,7 @@ if __name__ == '__main__':
 	pp = pprint.PrettyPrinter( indent = 4 )
 
 	""" Получение статистики по всем звонкам за указанную дату """
-	result = ct.captureCalls( '11/07/2017', '1', 'false', 'false', 'false' )
+	result = ct.captureCalls( '11/07/2017', '1', 'false', 'false', 'false', 'false' )
 	pp.pprint( result )
 
 	""" Сохранение идентификаторов звонков за указанную ранее дату """

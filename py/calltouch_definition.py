@@ -25,7 +25,7 @@ class CalltouchApi:
 		self.token = token
 		self.url = 'http://api.calltouch.ru/calls-service/'
 
-	def captureCalls(self,date, attribution, targetOnly, uniqTargetOnly, callbackCall):
+	def captureCalls(self,date, attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall):
 
 		""" Получение статистики по звонкам за один день в разрезе источника и кампании трафика с учетом типа звонка """
 
@@ -35,6 +35,7 @@ class CalltouchApi:
 			'dateTo': date,
 			'attribution': attribution,
 			'targetOnly': targetOnly,
+			'uniqueOnly': uniqOnly,
 			'uniqTargetOnly': uniqTargetOnly,
 			'callbackOnly': callbackCall
 		}
