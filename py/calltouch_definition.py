@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 try:
-	import urllib
+	try:
+	    from urllib.parse import urlencode
+	except ImportError:
+	    from urllib import urlencode
 	import json
 	import requests
 	import sys
@@ -33,13 +36,13 @@ class CalltouchApi:
 			'clientApiId': self.token,
 			'dateFrom': date,
 			'dateTo': date,
-			'attribution': str(attribution),
+			'attribution': attribution,
 			'targetOnly': targetOnly,
 			'uniqueOnly': uniqOnly,
 			'uniqTargetOnly': uniqTargetOnly,
 			'callbackOnly': callbackCall
 		}
-		query = urllib.parse.urlencode(query)
+		query = urlencode(query)
 		req = requests.get(self.url + 'RestAPI/' + str(self.siteId) + '/calls-diary/calls?' + query)
 		if(req.status_code == 200):
 			response = json.loads(req.text)
@@ -67,7 +70,7 @@ class CalltouchApi:
 		query = {
 			'clientApiId': self.token
 		}
-		query = urllib.parse.urlencode(query)
+		query = urlencode(query)
 		req = requests.get(node + '/calls-service/RestAPI/' + str(self.siteId) + '/calls-diary/calls/' + str(callId) + '/download?' + query, stream=True)
 		if(req.status_code == 200):
 			record = req.content;
@@ -86,7 +89,7 @@ class CalltouchApi:
 			'dateFrom': dateStart,
 			'dateTo': dateEnd
 		}
-		query = urllib.parse.urlencode(query)
+		query = urlencode(query)
 		req_chain = {
 			'callsTotal': '/calls/total-count?',
 			'callsByDate': '/calls/count-by-date?',
@@ -107,5 +110,3 @@ class CalltouchApi:
 			return result
 		else:
 			return {'status': False, 'message': 'Server Responded With Status Code: ' + str(req.status_code)}
-
-
