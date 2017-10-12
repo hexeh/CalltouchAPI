@@ -17,7 +17,20 @@
 
 ```python
 """ Инициализация класса """
-ct = CalltouchApi('PasteYourSiteIdHere', 'PasteYourTokenHere')
+config = {
+		'calltouch': [
+		{'name': 'Сайт №1', 'siteId': 1, 'token': 'aa'},
+		{'name': 'Сайт №2', 'siteId': 2, 'token': 'bb'},
+		{'name': 'Сайт №3', 'siteId': 3, 'token': 'cc'}
+		]
+	}
+
+# Конфигурацию можно брать и из файла
+# config_file = open('configs/calltouch.json')
+# config = json.load(config_file)
+# config_file.close()
+
+ct = CalltouchApi(config)
 ```
 
 ### Получение статистики по звонкам
@@ -32,7 +45,7 @@ API допускает получать статистику по звонкам
   ```python
   from calltouch_definition import CalltouchApi
   
-  ct = CalltouchApi('PasteYourSiteIdHere', 'PasteYourTokenHere')
+  ct = CalltouchApi(config)
   stats = ct.captureStats('11/07/2017', '11/07/2017')
   """Помимо такого использования, можно явно указать степень разбиения статистики.
   Например:
@@ -47,7 +60,7 @@ API допускает получать статистику по звонкам
   from calltouch_definition import CalltouchApi
   
   pp = pprint.PrettyPrinter(indent = 4)
-  ct = CalltouchApi('PasteYourSiteIdHere', 'PasteYourTokenHere')
+  ct = CalltouchApi(config)
   stats = ct.captureStats('11/07/2017', '11/07/2017', 'callsByDate')
   
   print(stats)
@@ -58,7 +71,7 @@ API допускает получать статистику по звонкам
   from calltouch_definition import CalltouchApi
   
   pp = pprint.PrettyPrinter(indent = 4)
-  ct = CalltouchApi('PasteYourSiteIdHere', 'PasteYourTokenHere')
+  ct = CalltouchApi(config)
   stats = ct.captureStats('11/07/2017', '11/07/2017', 'callsByDateSeoOnly')
   
   print(stats)
@@ -69,7 +82,7 @@ API допускает получать статистику по звонкам
   from calltouch_definition import CalltouchApi
   
   pp = pprint.PrettyPrinter(indent = 4)
-  ct = CalltouchApi('PasteYourSiteIdHere', 'PasteYourTokenHere')
+  ct = CalltouchApi(config)
   stats = ct.captureStats('11/07/2017', '11/07/2017', 'callsByKeywords')
   
   print(stats)
@@ -103,7 +116,7 @@ API допускает получать статистику по звонкам
   from calltouch_definition import CalltouchApi
   
   pp = pprint.PrettyPrinter(indent = 4)
-  ct = CalltouchApi('PasteYourSiteIdHere', 'PasteYourTokenHere')
+  ct = CalltouchApi(config)
   stats = ct.captureCalls('11/07/2017', '1', 'false', 'false', 'false', 'false')
   
   print(stats)
@@ -117,8 +130,10 @@ API допускает получать статистику по звонкам
   - Только уникальные звонки ('true', 'false')
   - Только уникально-целевые звонки ('true', 'false')
   - Только обратные звонки ('true', 'false')
+  - Возвращаемые данные в сыром или агрегированном по кампаниям виде (True, False)
+  - Загрузка статистики за один день или период с указанной даты по вчерашний день (True, False)
   
-  **Возвращаемое значение** представляет собой список словарей следующего вида:
+  **Возвращаемое значение** представляет собой список словарей следующего вида (в случае агрегированных данных):
   
   ```json
   {
