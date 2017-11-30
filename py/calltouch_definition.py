@@ -139,7 +139,7 @@ class CalltouchApi:
 					result = [{'siteId': cfg['siteId'], 'siteName': cfg['name'], 'callsTotal': response}]
 				global_res += result
 			else:
-				global_res += [{'siteId': cfg['siteId'], 'siteName': cfg['name'], 'date': date, 'errorCode': req.status_code, 'errorText': req.text}]
+				global_res += [{'siteId': cfg['siteId'], 'siteName': cfg['name'], 'date': dateStart, 'errorCode': req.status_code, 'errorText': req.text}]
 		return global_res
 
 
