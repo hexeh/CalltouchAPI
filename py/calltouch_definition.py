@@ -24,7 +24,7 @@ class CalltouchApi:
 		# config = {'calltouch': [{'siteId': 123, 'token': 'abcd', 'name': 'mynameis'},..]}
 		self.url = 'http://api.calltouch.ru/calls-service/'
 
-	def captureCalls(self, date, attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall, rawData = False, untilEnd = False):
+	def captureCalls(self, date, attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall, rawData = False, untilEnd = False, debug = False):
 
 		""" Получение статистики по звонкам за один день в разрезе источника и кампании трафика с учетом типа звонка """
 
@@ -41,12 +41,14 @@ class CalltouchApi:
 				'callbackOnly': callbackCall
 			}
 			query = urllib.parse.urlencode(query)
-			req = requests.get('{0}RestAPI/{1!s}/calls-diary/calls?{2!s}'.format(
+			request_uri = '{0}RestAPI/{1!s}/calls-diary/calls?{2!s}'.format(
 				self.url,
 				cfg['siteId'],
 				query
-				)
 			)
+			req = requests.get(request_uri)
+			if debug:
+				print('Query: {0}'.format(request_uri))
 			if(req.status_code == 200):
 				response = json.loads(req.text)
 				if rawData:
@@ -69,11 +71,14 @@ class CalltouchApi:
 					for c in campaigns]
 				global_res += campaigns_data
 			else:
-				global_res += [{'siteId': cfg['siteId'], 'siteName': cfg['name'], 'date': date, 'errorCode': req.status_code, 'errorText': req.text}]
+				details = {'siteId': cfg['siteId'], 'siteName': cfg['name'], 'date': date, 'errorCode': req.status_code, 'errorText': req.text}
+				if debug:
+					print(details)
+				global_res += details
 		if untilEnd:
 			dateNext = datetime.datetime.strptime(date, '%d/%m/%Y').date() +  datetime.timedelta(1)
 			if dateNext < datetime.date.today():
-				global_res += self.captureCalls(dateNext.strftime('%d/%m/%Y'), attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall, rawData, untilEnd)
+				global_res += self.captureCalls(dateNext.strftime('%d/%m/%Y'), attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall, rawData, untilEnd, debug)
 		return global_res
 
 	def captureRecords(self, node, callId):
