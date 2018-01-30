@@ -1,150 +1,134 @@
 # -*- coding: utf-8 -*-
 
 try:
-	import urllib
+	try:
+	    from urllib.parse import urlencode
+	except ImportError:
+	    from urllib import urlencode
 	import json
-	import datetime
 	import requests
 	import sys
-	from io import BytesIO
 except ImportError:
 	sys.exit(
 		'''Please install following packages using pip:
 		urllib
-		BytesIO
+		json
+		requests
 		'''
 	)
 
 
 class CalltouchApi:
 
-	def __init__(self, config):
+	def __init__(self, siteId, token, filtering = False):
 
-		self.config = config['calltouch']
-		# config = {'calltouch': [{'siteId': 123, 'token': 'abcd', 'name': 'mynameis'},..]}
-		self.url = 'http://api.calltouch.ru/calls-service/'
+		self.siteId = siteId
+		self.token = token
+		self.filters = filtering
+		node_detect = requests.get('https://api.calltouch.ru/calls-service/RestAPI/{0!s}/getnodeid/'.format(siteId))
+		if node_detect.status_code == 200:
+			node = json.loads(node_detect.text)
+			self.node = 'https://api-node{0!s}.calltouch.ru/'.format(node['nodeId'])
+		else:
+			self.node = 'http://api.calltouch.ru/'
+		self.url = self.node + 'calls-service/'
 
-	def captureCalls(self, date, attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall, rawData = False, untilEnd = False, debug = False):
+	def captureCalls(self, date, attribution = 1, targetOnly = False, uniqueOnly = False, uniqTargetOnly = False, callbackCall = False, raw = False, debug = False):
 
 		""" Получение статистики по звонкам за один день в разрезе источника и кампании трафика с учетом типа звонка """
 
-		global_res = []
-		for cfg in self.config:
-			query = {
-				'clientApiId': cfg['token'],
-				'dateFrom': date,
-				'dateTo': date,
-				'attribution': attribution,
-				'targetOnly': targetOnly,
-				'uniqueOnly': uniqOnly,
-				'uniqTargetOnly': uniqTargetOnly,
-				'callbackOnly': callbackCall
-			}
-			query = urllib.parse.urlencode(query)
-			request_uri = '{0}RestAPI/{1!s}/calls-diary/calls?{2!s}'.format(
-				self.url,
-				cfg['siteId'],
-				query
-			)
-			req = requests.get(request_uri)
-			if debug:
-				print('Query: {0}'.format(request_uri))
-			if(req.status_code == 200):
-				response = json.loads(req.text)
-				if rawData:
-					campaigns_data = response
-				else:
-					campaigns = set([i['utmCampaign'] for i in response])
-					campaigns_data = [
-						{
-							'date': date,
-							'siteId': cfg['siteId'],
-							'siteName': cfg['name'],
-							'source': [i['utmSource'] for i in response if (i['utmCampaign'] == c)][0],
-							'name': c, 
-							'ordinaryCalls': len([o for o in response if (o['utmCampaign'] == c)]),
-							'callIDs': [o['callId'] for o in response if (o['utmCampaign'] == c)],
-							'uniqCalls': len([o for o in response if (o['utmCampaign'] == c and o['uniqueCall'] == 'True')]),
-							'targetCalls': len([o for o in response if (o['utmCampaign'] == c and o['targetCall'] == 'True')]),
-							'uniqTargetCalls': len([o for o in response if (o['utmCampaign'] == c and o['uniqTargetCall'] == 'True')])
-						} 
-					for c in campaigns]
-				global_res += campaigns_data
-			else:
-				details = {'siteId': cfg['siteId'], 'siteName': cfg['name'], 'date': date, 'errorCode': req.status_code, 'errorText': req.text}
+		result = []
+		if self.filters:
+			for f in self.filters:
+				query = {
+					'clientApiId': self.token,
+					'dateFrom': date,
+					'dateTo': date,
+					'attribution': attribution
+				}
+				if targetOnly:
+					query['targetOnly'] = 'true'
+				if uniqueOnly:
+					query['targetOnly'] = 'true'
+				if uniqTargetOnly:
+					query['uniqTargetOnly'] = 'true'
+				if callbackOnly:
+					query['callbackOnly'] = 'true'
+				for fk in f.keys():
+					query[fk] = f[fk]
+				query = urlencode(query)
+				req = requests.get(self.url + 'RestAPI/' + str(self.siteId) + '/calls-diary/calls?' + query)
 				if debug:
-					print(details)
-				global_res += details
-		if untilEnd:
-			dateNext = datetime.datetime.strptime(date, '%d/%m/%Y').date() +  datetime.timedelta(1)
-			if dateNext < datetime.date.today():
-				global_res += self.captureCalls(dateNext.strftime('%d/%m/%Y'), attribution, targetOnly, uniqOnly, uniqTargetOnly, callbackCall, rawData, untilEnd, debug)
-		return global_res
+					print(self.url + 'RestAPI/' + str(self.siteId) + '/calls-diary/calls?' + query)
+				if(req.status_code == 200):
+					response = json.loads(req.text)
+					campaigns = set([i['utmCampaign'] for i in response])
+					if raw:
+						result += response
+					else:
+						result += [
+							{
+								'date': date,
+								'source': [i['source'] for i in response if (i['utmCampaign'] == c)][0],
+								'medium': [i['medium'] for i in response if (i['utmCampaign'] == c)][0],
+								'name': c, 
+								'ordinaryCalls': len([o for o in response if (o['utmCampaign'] == c)]),
+								'callIDs': [o['callId'] for o in response if (o['utmCampaign'] == c)],
+								'uniqCalls': len([o for o in response if (o['utmCampaign'] == c and o['uniqueCall'] == 'True')]),
+								'targetCalls': len([o for o in response if (o['utmCampaign'] == c and o['targetCall'] == 'True')]),
+								'uniqTargetCalls': len([o for o in response if (o['utmCampaign'] == c and o['uniqTargetCall'] == 'True')])
+							} 
+						for c in campaigns]
+				else:
+					print('Server Responded With Status Code: ' + str(req.status_code))
+		if debug:
+			print(result)
+		return(result)
 
-	def captureRecords(self, node, callId):
+	def captureRecords(self, callId):
 
 		""" Скачивание записи звонка по его идентификатору """
 
-		global_res = []
-		for cfg in self.config:
-			query = {
-				'clientApiId': cfg['token']
-			}
-			query = urllib.parse.urlencode(query)
-			req = requests.get('{0}/calls-service/RestAPI/{1!s}/calls-diary/calls/{2!s}/download?{3!s}'.format(
-				node,
-				cfg['siteId'],
-				callId,
-				query
-				), 
-				stream = True
-			)
-			if(req.status_code == 200):
-				record = req.content;
-				with open(str(callId) + '_record.mp3', 'wb') as r:
-					r.write(record);
-				global_res.append({'siteId': cfg['siteId'], 'siteName': cfg['name'], 'status': True, 'message': 'Call Record Saved as: ' + str(callId) + '_record.mp3'})
-			else:
-				global_res.append({'siteId': cfg['siteId'], 'siteName': cfg['name'], 'status': False, 'message': req.text, 'errorCode': req.status_code})
-		return global_res
+		query = {
+			'clientApiId': self.token
+		}
+		query = urlencode(query)
+		req = requests.get(self.node + '/calls-service/RestAPI/' + str(self.siteId) + '/calls-diary/calls/' + str(callId) + '/download?' + query, stream=True)
+		if(req.status_code == 200):
+			record = req.content;
+			with open(str(callId) + '_record.mp3', 'wb') as r:
+				r.write(record);
+			return {'status': True, 'message': 'Call Record Saved as: ' + str(callId) + '_record.mp3'}
+		else:
+			return {'status': False, 'message': 'Server Responded With Status Code: ' + str(req.status_code)}
 
 	def captureStats(self, dateStart, dateEnd, type = 'callsTotal'):
 
 		""" Получение статистики для кабинета по предусмотренным в API срезам """
-		
-		global_res = []
-		for cfg in self.config:
-			query = {
-				'access_token': cfg['token'],
-				'dateFrom': dateStart,
-				'dateTo': dateEnd
-			}
-			query = urllib.parse.urlencode(query)
-			req_chain = {
-				'callsTotal': '/calls/total-count?',
-				'callsByDate': '/calls/count-by-date?',
-				'callsByDateSeoOnly': '/calls/seo/count-by-date?',
-				'callsByKeywords': '/calls/seo/count-by-keywords?'
-			}.get(type, '/calls/total-count?')
-			req = requests.get(self.url + '{0}RestAPI/statistics/{1!s}{2}{3}'.format(
-				self.url,
-				cfg['siteId'],
-				req_chain,
-				query)
-			)
-			if(req.status_code == 200):
-				response = json.loads(req.text);
-				if type == 'callsByDate':
-					result = [{'date': k, 'siteId': cfg['siteId'], 'siteName': cfg['name'], 'calls': v} for k,v in response.items()]
-				elif type == 'callsByDateSeoOnly':
-					result = [{'date': k, 'siteId': cfg['siteId'], 'siteName': cfg['name'], 'calls': v} for k,v in response.items()]
-				elif type == 'callsByKeywords':
-					result = [{'keyword': k, 'siteId': cfg['siteId'], 'siteName': cfg['name'], 'calls': v} for k,v in response.items()]
-				else:
-					result = [{'siteId': cfg['siteId'], 'siteName': cfg['name'], 'callsTotal': response}]
-				global_res += result
+
+		query = {
+			'access_token': self.token,
+			'dateFrom': dateStart,
+			'dateTo': dateEnd
+		}
+		query = urlencode(query)
+		req_chain = {
+			'callsTotal': '/calls/total-count?',
+			'callsByDate': '/calls/count-by-date?',
+			'callsByDateSeoOnly': '/calls/seo/count-by-date?',
+			'callsByKeywords': '/calls/seo/count-by-keywords?'
+		}.get(type, '/calls/total-count?')
+		req = requests.get(self.url + 'RestAPI/statistics/' + str(self.siteId) + req_chain + query)
+		if(req.status_code == 200):
+			response = json.loads(req.text);
+			if type == 'callsByDate':
+				result = [{'date': k, 'calls': v} for k,v in response.items()]
+			elif type == 'callsByDateSeoOnly':
+				result = [{'date': k, 'calls': v} for k,v in response.items()]
+			elif type == 'callsByKeywords':
+				result = [{'keyword': k, 'calls': v} for k,v in response.items()]
 			else:
-				global_res += [{'siteId': cfg['siteId'], 'siteName': cfg['name'], 'date': dateStart, 'errorCode': req.status_code, 'errorText': req.text}]
-		return global_res
-
-
+				result = {'callsTotal': response}
+			return result
+		else:
+			return {'status': False, 'message': 'Server Responded With Status Code: ' + str(req.status_code)}
