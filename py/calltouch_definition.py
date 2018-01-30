@@ -6,6 +6,7 @@ try:
 	except ImportError:
 	    from urllib import urlencode
 	import json
+	import datetime
 	import requests
 	import sys
 except ImportError:
@@ -24,7 +25,10 @@ class CalltouchApi:
 
 		self.siteId = siteId
 		self.token = token
-		self.filters = filtering
+		if filtering:
+			self.filters = filtering
+		else:
+			self.filters = []
 		node_detect = requests.get('https://api.calltouch.ru/calls-service/RestAPI/{0!s}/getnodeid/'.format(siteId))
 		if node_detect.status_code == 200:
 			node = json.loads(node_detect.text)
@@ -33,12 +37,12 @@ class CalltouchApi:
 			self.node = 'http://api.calltouch.ru/'
 		self.url = self.node + 'calls-service/'
 
-	def captureCalls(self, date, attribution = 1, targetOnly = False, uniqueOnly = False, uniqTargetOnly = False, callbackCall = False, raw = False, debug = False):
+	def captureCalls(self, date, attribution = 1, targetOnly = False, uniqueOnly = False, uniqTargetOnly = False, callbackOnly = False, raw = False, debug = False, untilEnd = False):
 
 		""" Получение статистики по звонкам за один день в разрезе источника и кампании трафика с учетом типа звонка """
 
 		result = []
-		if self.filters:
+		if len(self.filters) > 0:
 			for f in self.filters:
 				query = {
 					'clientApiId': self.token,
@@ -81,6 +85,50 @@ class CalltouchApi:
 						for c in campaigns]
 				else:
 					print('Server Responded With Status Code: ' + str(req.status_code))
+		else:
+			query = {
+				'clientApiId': self.token,
+				'dateFrom': date,
+				'dateTo': date,
+				'attribution': attribution
+			}
+			if targetOnly:
+				query['targetOnly'] = 'true'
+			if uniqueOnly:
+				query['targetOnly'] = 'true'
+			if uniqTargetOnly:
+				query['uniqTargetOnly'] = 'true'
+			if callbackOnly:
+				query['callbackOnly'] = 'true'
+			query = urlencode(query)
+			req = requests.get(self.url + 'RestAPI/' + str(self.siteId) + '/calls-diary/calls?' + query)
+			if debug:
+				print(self.url + 'RestAPI/' + str(self.siteId) + '/calls-diary/calls?' + query)
+			if(req.status_code == 200):
+				response = json.loads(req.text)
+				campaigns = set([i['utmCampaign'] for i in response])
+				if raw:
+					result += response
+				else:
+					result += [
+						{
+							'date': date,
+							'source': [i['source'] for i in response if (i['utmCampaign'] == c)][0],
+							'medium': [i['medium'] for i in response if (i['utmCampaign'] == c)][0],
+							'name': c, 
+							'ordinaryCalls': len([o for o in response if (o['utmCampaign'] == c)]),
+							'callIDs': [o['callId'] for o in response if (o['utmCampaign'] == c)],
+							'uniqCalls': len([o for o in response if (o['utmCampaign'] == c and o['uniqueCall'] == 'True')]),
+							'targetCalls': len([o for o in response if (o['utmCampaign'] == c and o['targetCall'] == 'True')]),
+							'uniqTargetCalls': len([o for o in response if (o['utmCampaign'] == c and o['uniqTargetCall'] == 'True')])
+						} 
+					for c in campaigns]
+			else:
+				print('Server Responded With Status Code: ' + str(req.status_code))
+		if untilEnd:
+			dateNext = datetime.datetime.strptime(date, '%d/%m/%Y').date() +  datetime.timedelta(1)
+			if dateNext < datetime.date.today():
+				result += self.captureCalls(dateNext.strftime('%d/%m/%Y'), attribution, targetOnly, uniqueOnly, uniqTargetOnly, callbackOnly, raw, debug, untilEnd)
 		if debug:
 			print(result)
 		return(result)
