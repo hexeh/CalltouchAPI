@@ -30,7 +30,8 @@ config = {
 # config = json.load(config_file)
 # config_file.close()
 
-ct = CalltouchApi(config)
+for i in config['calltouch']:
+	ct = CalltouchApi(i['siteId'], i['token'])
 ```
 
 ### Получение статистики по звонкам
@@ -117,7 +118,7 @@ API допускает получать статистику по звонкам
   
   pp = pprint.PrettyPrinter(indent = 4)
   ct = CalltouchApi(config)
-  stats = ct.captureCalls('11/07/2017', '1', 'false', 'false', 'false', 'false')
+  stats = ct.captureCalls('11/07/2017')
   
   print(stats)
   ```
@@ -126,10 +127,10 @@ API допускает получать статистику по звонкам
   
   - Дата сбора статистики (в формате **dd/mm/yyyy**)
   - Модель атрибуции (*1* или *0*)
-  - Только целевые звонки ('true', 'false')
-  - Только уникальные звонки ('true', 'false')
-  - Только уникально-целевые звонки ('true', 'false')
-  - Только обратные звонки ('true', 'false')
+  - Только целевые звонки (True, False)
+  - Только уникальные звонки (True, False)
+  - Только уникально-целевые звонки (True, False)
+  - Только обратные звонки (True, False)
   - Возвращаемые данные в сыром или агрегированном по кампаниям виде (True, False)
   - Загрузка статистики за один день или период с указанной даты по вчерашний день (True, False)
   
