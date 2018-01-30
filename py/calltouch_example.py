@@ -20,38 +20,41 @@ if __name__ == '__main__':
 		]
 	}
 	stats_date = datetime.date.today() - datetime.timedelta(3)
+
 	pp = pprint.PrettyPrinter(indent = 4)
-	ct = CalltouchApi(config)
+	for i in config['calltouch']:
+		ct = CalltouchApi(i['siteId'], i['token'])
+		print('Your Site API node is: \033[1;32;40m {0!r} \033[0m'.format(ct.node))
 
-	""" Получение статистики по всем звонкам за указанную дату """
+		""" Получение статистики по всем звонкам за указанную дату """
 
-	call_stats_daily = ct.captureCalls(stats_date.strftime('%d/%m/%Y'), '1', 'false', 'false', 'false' , 'false', untilEnd = False)
-	pp.pprint(call_stats_daily)
+		call_stats_daily = ct.captureCalls(stats_date.strftime('%d/%m/%Y'), untilEnd = False)
+		pp.pprint(call_stats_daily)
 
-	""" Получение статистики по всем звонкам за указанную дату в сыром виде """
+		""" Получение статистики по всем звонкам за указанную дату в сыром виде """
 
-	call_stats_daily_raw = ct.captureCalls(stats_date.strftime('%d/%m/%Y'), '1', 'false', 'false', 'false' , 'false', rawData = True)
-	pp.pprint(call_stats_daily_raw)
+		call_stats_daily_raw = ct.captureCalls(stats_date.strftime('%d/%m/%Y'), raw = True)
+		pp.pprint(call_stats_daily_raw)
 
-	""" Получение статистики по всем звонкам за диапазон дат от указанной до вчерашнего дня """
+		""" Получение статистики по всем звонкам за диапазон дат от указанной до вчерашнего дня """
 
-	call_stats = ct.captureCalls(stats_date.strftime('%d/%m/%Y'), '1', 'false', 'false', 'false' , 'false', untilEnd = True)
-	with open('calltouch_calls_{0}_{1}.json'.format(stats_date.strftime('%d_%m_%Y'), (datetime.date.today() - datetime.timedelta(1)).strftime('%d_%m_%Y')), 'w') as f:
-		json.dump(call_stats, f)
+		call_stats = ct.captureCalls(stats_date.strftime('%d/%m/%Y'), '1', 'false', 'false', 'false' , 'false', untilEnd = True)
+		with open('calltouch_calls_{0}_{1}.json'.format(stats_date.strftime('%d_%m_%Y'), (datetime.date.today() - datetime.timedelta(1)).strftime('%d_%m_%Y')), 'w') as f:
+			json.dump(call_stats, f)
 
-	""" Сохранение идентификаторов звонков за указанную ранее дату """
+		""" Сохранение идентификаторов звонков за указанную ранее дату """
 
-	totalCallIDs = [i['callIDs'] for i in call_stats]
-	totalCallIDs = [y for x in totalCallIDs for y in x]
+		totalCallIDs = [i['callIDs'] for i in call_stats]
+		totalCallIDs = [y for x in totalCallIDs for y in x]
 
-	""" Скачивание записей первых 5 звонков за указанную ранее дату 
-		Получить адрес сервера можно в форме статьи - https://support.calltouch.ru/hc/ru/articles/209189625
-	"""
+		""" Скачивание записей первых 5 звонков за указанную ранее дату 
+			Получить адрес сервера можно в форме статьи - https://support.calltouch.ru/hc/ru/articles/209189625
+		"""
 
-	saveResults = [ct.captureRecords('PasteYourNodeAddressHere', i) for i in totalCallIDs[:4]]
-	pp.pprint( saveResults )
+		saveResults = [ct.captureRecords('PasteYourNodeAddressHere', i) for i in totalCallIDs[:4]]
+		pp.pprint( saveResults )
 
-	""" Получение статистики звонков по дням за указанный интервал дат """
+		""" Получение статистики звонков по дням за указанный интервал дат """
 
-	stats = ct.captureStats('11/07/2017', '11/07/2017', 'callsByDate')
-	pp.pprint( stats )
+		stats = ct.captureStats('11/07/2017', '11/07/2017', 'callsByDate')
+		pp.pprint( stats )
